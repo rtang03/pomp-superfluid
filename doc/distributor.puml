@@ -1,0 +1,110 @@
+@startuml
+header Overall distributor flow diagram
+title
+Overall Distributor Flow (PLAYER)
+end title
+
+autonumber "[0]"
+
+actor "Incentive\nManager" as MANAGER order 0
+actor "Subscriber" as SUBSCRIBER order 1
+participant "Wallet" as WALLET order 2
+participant "Browser" as BROWSER order 3
+control "NextApi" as NEXT order 5 #Gray
+entity "Dai\nContract" as DAI order 6 #White
+entity "DaiX\nContract" as DAIX order 7 #White
+entity "SuperFluid\nContract" as SUPERFLUID order 8 #White
+entity "Proxy\nContract" as PROXY order 9 #White
+entity "Distributor\nContract" as DISTRIBUTOR order 10 #White
+
+== Upgrade Token ==
+MANAGER->BROWSER: fetch website
+BROWSER->BROWSER: configure\n( symbol, amount )
+BROWSER->SUPERFLUID: loadWrapperSuperToken ( symbol )
+SUPERFLUID-->BROWSER: (wrappedSuperToken)
+BROWSER->DAIX: balanceOf ()
+DAI-->BROWSER: (void)
+BROWSER->DAI: approve
+DAI-->BROWSER: (void)
+BROWSER->DAIX: upgrade
+DAIX->DAI: wrap
+DAI-->DAIX: (void)
+DAIX-->BROWSER: (void)
+
+autonumber "[0]"
+
+== Create Distributor ==
+MANAGER->BROWSER: fetch website
+BROWSER->BROWSER: configure\n( challenge, timelock )
+BROWSER->PROXY: indexIdCounter
+PROXY-->BROWSER: (uint256)
+BROWSER->NEXT: createTypedData\n( challenge, indexId, timelock )
+NEXT->PROXY: nonce
+PROXY-->NEXT: (uint256)
+NEXT-->BROWSER: (typedData)
+BROWSER->PROXY: getDistributorAddress ( indexId )
+PROXY-->BROWSER: (address)
+BROWSER->PROXY: createDistributor ( challenge, indexId, nonce, signature, deadline )
+PROXY->PROXY: ???
+PROXY->PROXY: emit Created
+PROXY-->BROWSER: (address)
+BROWSER->BROWSER: wait
+BROWSER->DISTRIBUTOR: initialize ( host, superToken, indexId )
+DISTRIBUTOR->SUPERFLUID: createIndex\n( superToken, indexId )
+SUPERFLUID-->DISTRIBUTOR: (void)
+DISTRIBUTOR-->BROWSER: (tx, wait)
+BROWSER->BROWSER: wait ( 1 )
+
+autonumber "[0]"
+
+== Deposit Fund ==
+MANAGER->BROWSER: fetch website
+
+autonumber "[0]"
+
+== Approve Subscription ==
+SUBSCRIBER->BROWSER: fetch website
+BROWSER->BROWSER: configure ( challenge )
+BROWSER->PROXY: getDistribution ( challenge )
+PROXY-->BROWSER: (Distribution)
+BROWSER->NEXT: approveTypedData ( challenge )
+NEXT->DISTRIBUTOR: nonce
+DISTRIBUTOR-->NEXT: (uint256)
+NEXT-->BROWSER: (typedData)
+BROWSER->DISTRIBUTOR: approveSubscription ( challenge, nonce, signature, deadline )
+DISTRIBUTOR-->BROWSER: (tx, wait)
+BROWSER->BROWSER: wait ( 1 )
+
+autonumber "[0]"
+
+== Gain / lose share(s) ==
+MANAGER->BROWSER: fetch website
+BROWSER->PROXY: getDistribution ( challenge )
+PROXY-->BROWSER: (Distribution)
+BROWSER->NEXT: gainShareTypedData ( subscriber )
+NEXT->DISTRIBUTOR: nonce
+DISTRIBUTOR-->NEXT: (uint256)
+NEXT-->BROWSER: (typedData)
+BROWSER->DISTRIBUTOR: gainShare ( subscriber, nonce, signature, deadline )
+DISTRIBUTOR-->BROWSER: (tx, wait)
+BROWSER->BROWSER: wait ( 1 )
+BROWSER->DISTRIBUTOR: getCurrentUnitsHeld
+DISTRIBUTOR-->BROWSER: (uint256)
+
+autonumber "[0]"
+
+== Distribute ==
+MANAGER->BROWSER: fetch website
+
+autonumber "[0]"
+
+== Withdraw Fund ==
+MANAGER->BROWSER: fetch website
+
+== Manager Dashboard ==
+MANAGER->BROWSER: fetch website
+
+== Subscriber Dashboard ==
+SUBSCRIBER->BROWSER: fetch website
+
+@enduml
